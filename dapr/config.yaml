@@ -1,0 +1,8 @@
+apiVersion: dapr.io/v1.0
+kind: Configuration
+metadata:
+  name: default
+  namespace: default
+spec:
+  tracing:
+    samplingRate: "1"

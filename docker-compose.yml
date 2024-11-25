@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  ############################
+  # input-validator Service + Dapr sidecar
+  ############################
+  input-validator:
+    build: ./input-validator
+    container_name: input-validator
+    ports:
+      - "3002:3002" # Unique port for Input Validator
+    restart: on-failure
+    env_file:
+      - ./input-validator/.env
+    depends_on:
+      - rabbitmq
+    networks:
+      - network-dapr
+  
+  input-validator-dapr:
+    image: "daprio/daprd:edge"
+    container_name: input-validator-dapr
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 10
+        window: 120s
+    command: ["./daprd",
+      "-app-port", "3002",
+      "-app-id", "input-validator",
+      "-app-protocol", "http",
+      "-dapr-http-port", "3502", # Dapr sidecar HTTP port for Input Validator
+      "-components-path", "./dapr/components",
+      "-config", "./dapr/config.yaml",
+      "--log-level", "debug"
+    ]
+    volumes:
+      - "./dapr/:/dapr"
+      - "./dapr/components:/components"
+    depends_on:
+      - input-validator
+    network_mode: "service:input-validator"
+
+  ############################
+  # sum-calculator Service + Dapr sidecar
+  ############################
+  sum-calculator:
+    build: ./sum-calculator
+    container_name: sum-calculator
+    ports:
+      - "3003:3003" # Unique port for Sum Calculator
+    restart: on-failure
+    env_file:
+      - ./sum-calculator/.env
+    networks:
+      - network-dapr
+  
+  sum-calculator-dapr:
+    image: "daprio/daprd:edge"
+    container_name: sum-calculator-dapr
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 10
+        window: 120s
+    command: ["./daprd",
+      "-app-port", "3003",
+      "-app-id", "sum-calculator",
+      "-app-protocol", "http",
+      "-dapr-http-port", "3503", # Dapr sidecar HTTP port for Sum Calculator
+      "-components-path", "./dapr/components",
+      "-config", "./dapr/config.yaml",
+      "--log-level", "debug"
+    ]
+    volumes:
+      - "./dapr/:/dapr"
+      - "./dapr/components:/components"
+    depends_on:
+      - sum-calculator
+    network_mode: "service:sum-calculator"
+
+  ############################
+  # RabbitMQ
+  ############################
+  rabbitmq:
+    image: "rabbitmq:3-management-alpine"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - network-dapr
+
+networks:
+  network-dapr:
+    driver: bridge

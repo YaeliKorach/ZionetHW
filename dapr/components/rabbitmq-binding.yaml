@@ -1,0 +1,19 @@
+apiVersion: dapr.io/v1.0
+kind: Component
+metadata:
+  name: rabbitmq-binding
+  namespace: default
+spec:
+  type: bindings.rabbitmq
+  version: v1
+  metadata:
+  - name: host
+    value: "amqp://rabbitmq:5672"
+  - name: durable
+    value: "true"
+  - name: queueName
+    value: "task-queue"
+  - name: deleteWhenUnused
+    value: "false"
+auth:
+  secretStore: ""
